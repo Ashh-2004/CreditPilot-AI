@@ -14,3 +14,9 @@ streamlit-authenticator==0.4.2
 # Environment & utilities
 python-dotenv==1.2.2
 faker==40.23.0
+
+# Machine Learning & AI
+scikit-learn>=1.2.0
+xgboost>=1.7.0
+joblib>=1.2.0
+google-generativeai>=0.3.0

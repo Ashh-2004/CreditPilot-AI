@@ -34,12 +34,13 @@ with st.form("loan_form"):
 
     submitted = st.form_submit_button("🔍 Analyse Loan Application", use_container_width=True)
 
-# ── Analysis ────────────────────────────────────────────────
+# ── Analysis & Save Logic ───────────────────────────────────
 if submitted:
     if not name:
         st.warning("Please enter applicant name.")
         st.stop()
 
+    # Calculations
     emi          = calc_emi(loan_amount, interest_rate, tenure)
     monthly_inc  = round(annual_income / 12)
     emi_ratio    = round((emi / monthly_inc) * 100, 1)
@@ -47,31 +48,104 @@ if submitted:
     total_pay    = emi * tenure
     total_int    = total_pay - loan_amount
 
+    # ML Model Prediction
+    from modules.ml_model import predict_loan_default
+    ml_prob, ml_band = predict_loan_default({
+        'credit_score': credit_score,
+        'annual_income': annual_income,
+        'employment_type': employment,
+        'existing_loans': existing,
+        'loan_amount': loan_amount,
+        'loan_purpose': purpose,
+        'interest_rate': interest_rate,
+        'tenure_months': tenure,
+        'age': age
+    })
+
+    # Determine status using Machine Learning (not rule-based)
+    if ml_band == "Low":
+        status = "approved"
+    elif ml_band == "Medium":
+        status = "review"
+    else:
+        status = "rejected"
+
+    # Save to session state so it survives reruns when clicking "Save to DB"
+    st.session_state.app_result = {
+        'name': name,
+        'email': email,
+        'credit_score': credit_score,
+        'annual_income': annual_income,
+        'employment': employment,
+        'purpose': purpose,
+        'existing': existing,
+        'property_area': property_area,
+        'loan_amount': loan_amount,
+        'interest_rate': interest_rate,
+        'tenure': tenure,
+        'age': age,
+        'emi': emi,
+        'monthly_inc': monthly_inc,
+        'emi_ratio': emi_ratio,
+        'risk_score': risk_score,
+        'status': status,
+        'total_int': total_int,
+        'ml_prob': ml_prob,
+        'ml_band': ml_band
+    }
+
+if "app_result" in st.session_state:
+    res = st.session_state.app_result
+    
     st.divider()
     st.markdown("#### 📊 Financial Analysis")
 
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Monthly EMI",     f"₹{emi:,.0f}")
-    m2.metric("Monthly Income",  f"₹{monthly_inc:,.0f}")
-    m3.metric("EMI / Income",    f"{emi_ratio}%")
-    m4.metric("Total Interest",  f"₹{total_int:,.0f}")
+    m1.metric("Monthly EMI",     f"₹{res['emi']:,.0f}")
+    m2.metric("Monthly Income",  f"₹{res['monthly_inc']:,.0f}")
+    m3.metric("EMI / Income",    f"{res['emi_ratio']}%")
+    m4.metric("Total Interest",  f"₹{res['total_int']:,.0f}")
 
-    st.markdown(f"**Approval Probability: {risk_score}%**")
-    bar_color = "green" if risk_score >= 70 else "orange" if risk_score >= 45 else "red"
-    st.progress(risk_score / 100)
-
-    if risk_score >= 70:
-        st.success(f"✅ Loan Approved — Confidence: {risk_score}%")
-        status = "approved"
-        st.info("Strong credit profile with manageable EMI-to-income ratio. Recommend standard processing with documentation verification.")
-    elif risk_score >= 45:
-        st.warning(f"⚠️ Manual Review Required — Score: {risk_score}%")
-        status = "review"
-        st.info("Borderline application. Additional collateral or guarantor recommended. Senior officer review required before disbursement.")
+    st.divider()
+    st.markdown("### 🛡️ Credit Risk Decision Engines")
+    
+    # Clearly highlight that the overall application status is now determined by ML
+    if res['status'] == "approved":
+        st.success(f"🎉 **OVERALL DECISION: AUTO-APPROVED** — Determined strictly by XGBoost Machine Learning Model ({res['ml_band']} Risk)")
+    elif res['status'] == "review":
+        st.warning(f"⚠️ **OVERALL DECISION: DEFERRED FOR SENIOR OFFICER REVIEW** — Determined strictly by XGBoost Machine Learning Model ({res['ml_band']} Risk)")
     else:
-        st.error(f"❌ Loan Rejected — Risk Score: {risk_score}%")
-        status = "rejected"
-        st.info("High risk indicators detected. Reapply after 6 months with improved credit score (680+) or reduced loan amount.")
+        st.error(f"❌ **OVERALL DECISION: AUTO-REJECTED** — Determined strictly by XGBoost Machine Learning Model ({res['ml_band']} Risk)")
+
+    st.divider()
+    col_rule, col_ml = st.columns(2)
+    
+    with col_rule:
+        st.markdown("##### ⚙️ Traditional Rule-Based Engine (Educational View)")
+        st.markdown(f"**Weighted Approval Probability: {res['risk_score']}%**")
+        st.progress(res['risk_score'] / 100)
+        
+        if res['risk_score'] >= 70:
+            st.success(f"Rule Suggestion: ✅ Approved (Score: {res['risk_score']}%)")
+        elif res['risk_score'] >= 45:
+            st.warning(f"Rule Suggestion: ⚠️ Manual Review (Score: {res['risk_score']}%)")
+        else:
+            st.error(f"Rule Suggestion: ❌ Rejected (Score: {res['risk_score']}%)")
+            
+    with col_ml:
+        st.markdown("##### 🤖 Machine Learning Classifier (Active Decision Maker)")
+        st.markdown(f"**Model Default Probability: {res['ml_prob']}%**")
+        st.progress(res['ml_prob'] / 100)
+        
+        if res['ml_band'] == "Low":
+            st.success(f"ML Decision: 🟢 Auto-Approve (Band: {res['ml_band']})")
+            st.info("XGBoost predicts a low likelihood of default. Loan is auto-approved.")
+        elif res['ml_band'] == "Medium":
+            st.warning(f"ML Decision: 🟡 Refer for Review (Band: {res['ml_band']})")
+            st.info("XGBoost detects moderate default probability. Escalating for manual review.")
+        else:
+            st.error(f"ML Decision: 🔴 Auto-Reject (Band: {res['ml_band']})")
+            st.info("XGBoost flags high likelihood of default. Application is auto-rejected.")
 
     # ── Save to DB ───────────────────────────────────────────
     st.divider()
@@ -84,26 +158,31 @@ if submitted:
                         (full_name, email, credit_score, annual_income,
                          employment_type, property_area, existing_loans)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (name, email, credit_score, annual_income,
-                      employment, property_area, existing))
+                """, (res['name'], res['email'], res['credit_score'], res['annual_income'],
+                      res['employment'], res['property_area'], res['existing']))
 
                 # Get borrower_id
                 rows = fetch_all(
                     "SELECT borrower_id FROM borrowers WHERE full_name=%s ORDER BY borrower_id DESC LIMIT 1",
-                    (name,)
+                    (res['name'],)
                 )
                 borrower_id = rows[0]["borrower_id"]
 
-                # Insert application
+                # Insert application with rules-based score AND ML probability/band
                 execute("""
                     INSERT INTO loan_applications
                         (borrower_id, reviewed_by, loan_amount, loan_purpose,
-                         interest_rate, tenure_months, status, approval_probability)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (borrower_id, None, loan_amount, purpose,
-                      interest_rate, tenure, status, risk_score))
+                         interest_rate, tenure_months, status, approval_probability,
+                         ml_default_probability, ml_risk_band)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (borrower_id, None, res['loan_amount'], res['purpose'],
+                      res['interest_rate'], res['tenure'], res['status'], res['risk_score'],
+                      res['ml_prob'], res['ml_band']))
 
                 st.success("Application saved successfully!")
+                # Clear session state result after saving
+                del st.session_state.app_result
+                st.rerun()
             except Exception as e:
                 st.error(f"DB Error: {e}")
     else:

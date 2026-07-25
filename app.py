@@ -5,17 +5,18 @@ import bcrypt
 from db import fetch_all
 from pathlib import Path
 
-st.set_page_config(page_title="LoanIQ", layout="wide", page_icon="🏦")
+st.set_page_config(page_title="LoanSense AI", layout="wide", page_icon="🏦")
 
 # ── Dark theme CSS ──────────────────────────────────────────
 st.markdown("""<style>
   .stApp { background-color: #0d1117; color: #e6e6e6; }
+  header[data-testid="stHeader"] { background-color: #0d1117 !important; }
   section[data-testid="stSidebar"] { background-color: #0a0f14; }
   .stButton > button {
     background-color: #c9a227; color: #0a0f14;
     font-weight: 600; border: none; border-radius: 6px;
   }
-  .stTextInput > div > input, .stSelectbox > div {
+  .stTextInput > div > input, .stSelectbox > div, .stTextArea > div > textarea {
     background-color: #111820; border: 1px solid #1e2a35; color: #e6e6e6;
   }
 </style>""", unsafe_allow_html=True)
@@ -28,8 +29,8 @@ if "logged_in" not in st.session_state:
 
 # ── Role → allowed pages ────────────────────────────────────
 ROLE_PAGES = {
-    "admin":   ["Application", "Portfolio", "EMI Calculator", "Risk Analysis"],
-    "officer": ["Application", "EMI Calculator"],
+    "admin":   ["Application", "Portfolio", "EMI Calculator", "Risk Analysis", "AI Query Assistant"],
+    "officer": ["Application", "EMI Calculator", "AI Query Assistant"],
     "viewer":  ["Portfolio", "Risk Analysis"],
 }
 
@@ -37,7 +38,7 @@ ROLE_PAGES = {
 def show_login():
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
-        st.markdown("## 🏦 Loan**IQ**")
+        st.markdown("## 🏦 Loan**Sense AI**")
         st.markdown("##### Bank Lending Intelligence System")
         st.divider()
 
@@ -62,7 +63,7 @@ def show_login():
 # ── Sidebar (after login) ───────────────────────────────────
 def show_sidebar():
     with st.sidebar:
-        st.markdown(f"### Loan**IQ**")
+        st.markdown(f"### Loan**SenseAI**")
         st.caption("Bank Lending Intelligence")
         st.divider()
 
@@ -103,3 +104,6 @@ else:
 
     elif page == "Risk Analysis":
         exec(Path("modules/risk_analysis.py").read_text(encoding="utf-8"))
+
+    elif page == "AI Query Assistant":
+        exec(Path("modules/ai_query.py").read_text(encoding="utf-8"))

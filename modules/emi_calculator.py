@@ -1,96 +1,159 @@
+"""
+EMI, Amortization, and Prepayment Simulator module for LoanSense AI.
+Provides reducing balance instalment calculations, accelerated prepayment analysis,
+side-by-side payoff curves, and full schedule export.
+"""
+
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
-from calculations import calc_emi
+from calculations import calc_emi, calc_amortization_schedule
 
-st.markdown("## 🧮 EMI Calculator")
-st.caption("Calculate monthly instalments and generate amortization schedule")
-st.divider()
 
-col1, col2 = st.columns([1, 1.4])
+def render():
+    st.markdown("## 🧮 EMI & Prepayment Amortization Simulator")
+    st.caption("Calculate monthly instalments, evaluate accelerated prepayment strategies, and model interest savings")
+    st.divider()
 
-with col1:
-    st.markdown("#### Loan Parameters")
-    principal     = st.number_input("Principal Amount (₹)", min_value=10000, max_value=10000000, value=500000, step=10000)
-    annual_rate   = st.number_input("Annual Interest Rate (%)", min_value=1.0, max_value=30.0, value=10.5, step=0.1)
-    tenure_months = st.number_input("Tenure (months)", min_value=1, max_value=360, value=36)
-    processing_fee_pct = st.number_input("Processing Fee (%)", min_value=0.0, max_value=5.0, value=1.0, step=0.1)
-    calculate = st.button("Calculate EMI", use_container_width=True)
+    col1, col2 = st.columns([1, 1.3])
 
-with col2:
-    emi           = calc_emi(principal, annual_rate, tenure_months)
-    total_payment = round(emi * tenure_months)
-    total_interest = total_payment - principal
-    processing_fee = round(principal * processing_fee_pct / 100)
-    total_cost    = total_payment + processing_fee
+    with col1:
+        st.markdown("#### Facility Parameters")
+        principal = st.number_input("Principal Loan Amount (₹)", min_value=10000.0, max_value=50000000.0, value=1500000.0, step=50000.0)
+        annual_rate = st.number_input("Annual Interest Rate (% p.a.)", min_value=1.0, max_value=30.0, value=8.75, step=0.1)
+        tenure_months = st.number_input("Loan Tenure (Months)", min_value=6, max_value=360, value=180, step=6)
+        processing_fee_pct = st.number_input("Processing Fee (% of Principal)", min_value=0.0, max_value=5.0, value=0.75, step=0.1)
 
-    st.markdown("#### Results")
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Monthly EMI",    f"₹{emi:,.0f}")
-    m2.metric("Total Payment",  f"₹{total_cost:,.0f}")
-    m3.metric("Total Interest", f"₹{total_interest:,.0f}")
+        st.markdown("#### ⚡ Accelerated Prepayment Strategy (Optional)")
+        extra_monthly = st.number_input("Monthly Extra Prepayment (₹)", min_value=0.0, max_value=500000.0, value=2500.0, step=500.0)
+        use_lump_sum = st.checkbox("Include One-Time Lump-Sum Prepayment?", value=False)
+        lump_sum = 0.0
+        lump_month = 0
+        if use_lump_sum:
+            lump_sum = st.number_input("Lump-Sum Prepayment Amount (₹)", min_value=10000.0, max_value=5000000.0, value=100000.0, step=10000.0)
+            lump_month = st.slider("Execute Prepayment at Month #", 1, int(tenure_months), 12)
 
-    interest_pct  = round(total_interest / principal * 100, 1)
-    principal_pct = round(100 - interest_pct, 1)
+    with col2:
+        # Standard Baseline EMI calculation
+        base_emi = calc_emi(principal, annual_rate, int(tenure_months))
+        processing_fee = round(principal * processing_fee_pct / 100.0)
 
-    st.markdown(f"**Principal: {principal_pct}% &nbsp;|&nbsp; Interest: {interest_pct}%**")
-    st.progress(principal_pct / 100)
+        # Accelerated Prepayment Schedule Calculation
+        schedule_data = calc_amortization_schedule(
+            principal=principal,
+            annual_rate=annual_rate,
+            tenure_months=int(tenure_months),
+            monthly_prepayment=extra_monthly,
+            lump_sum_prepayment=lump_sum,
+            lump_sum_month=lump_month
+        )
 
-    # Donut chart
-    fig = go.Figure(data=[go.Pie(
-        labels=["Principal", "Interest", "Processing Fee"],
-        values=[principal, total_interest, processing_fee],
-        hole=0.60,
-        marker_colors=["#c9a227", "#e08030", "#378add"]
-    )])
-    fig.update_layout(
-        plot_bgcolor="#111820", paper_bgcolor="#111820",
-        font_color="#8aa8c0", showlegend=True,
-        legend=dict(font=dict(color="#8aa8c0")),
-        margin=dict(l=10, r=10, t=10, b=10),
-        height=220
+        st.markdown("#### Executive Payment Summary")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Scheduled Monthly EMI", f"₹{base_emi:,.0f}")
+        m2.metric("Total Interest (Stressed)", f"₹{schedule_data['total_interest']:,.0f}")
+        m3.metric(
+            "Interest Saved",
+            f"₹{schedule_data['interest_saved']:,.0f}",
+            delta=f"-{schedule_data['tenure_months_saved']} Months Saved!" if schedule_data['tenure_months_saved'] > 0 else "Baseline Pace",
+            delta_color="normal"
+        )
+
+        p1, p2 = st.columns(2)
+        p1.metric("Actual Payoff Tenure", f"{schedule_data['actual_tenure_months']} Months", delta=f"{schedule_data['tenure_months_saved']} Months Faster" if schedule_data['tenure_months_saved'] > 0 else "Full Term")
+        p2.metric("Total Outflow", f"₹{schedule_data['total_payment'] + processing_fee:,.0f}")
+
+        # Cost Breakdown Donut
+        fig_donut = go.Figure(data=[go.Pie(
+            labels=["Principal", "Interest Paid", "Processing Fee"],
+            values=[principal, schedule_data["total_interest"], processing_fee],
+            hole=0.6,
+            marker_colors=["#4ab86a", "#c9a227", "#378add"]
+        )])
+        fig_donut.update_layout(
+            plot_bgcolor="#111820", paper_bgcolor="#111820",
+            font_color="#8aa8c0", showlegend=True,
+            legend=dict(font=dict(color="#8aa8c0")),
+            margin=dict(l=10, r=10, t=10, b=10),
+            height=200
+        )
+        st.plotly_chart(fig_donut, use_container_width=True)
+
+    st.divider()
+
+    # ── Interactive Balance Payoff Trajectory ─────────────────────
+    st.markdown("#### 📉 Loan Balance Amortization Trajectory")
+
+    # Generate baseline schedule for comparison chart
+    base_schedule_data = calc_amortization_schedule(
+        principal=principal,
+        annual_rate=annual_rate,
+        tenure_months=int(tenure_months),
+        monthly_prepayment=0.0,
+        lump_sum_prepayment=0.0
     )
-    st.plotly_chart(fig, use_container_width=True)
 
-st.divider()
+    df_base = pd.DataFrame(base_schedule_data["schedule"])
+    df_accel = pd.DataFrame(schedule_data["schedule"])
 
-# ── Amortization schedule ────────────────────────────────────
-st.markdown("#### Amortization Schedule")
+    if not df_base.empty and not df_accel.empty:
+        fig_traj = go.Figure()
+        fig_traj.add_trace(go.Scatter(
+            x=df_base["month"],
+            y=df_base["closing_balance"],
+            mode="lines",
+            name="Scheduled Standard Amortization",
+            line=dict(color="#c9a227", width=2, dash="dash")
+        ))
+        fig_traj.add_trace(go.Scatter(
+            x=df_accel["month"],
+            y=df_accel["closing_balance"],
+            mode="lines",
+            name="Accelerated Prepayment Amortization",
+            line=dict(color="#4ab86a", width=3)
+        ))
+        fig_traj.update_layout(
+            plot_bgcolor="#111820", paper_bgcolor="#111820",
+            font_color="#8aa8c0",
+            xaxis_title="Tenure Month",
+            yaxis_title="Outstanding Balance (₹)",
+            margin=dict(l=10, r=10, t=20, b=10),
+            height=300
+        )
+        st.plotly_chart(fig_traj, use_container_width=True)
 
-show_all = st.checkbox("Show full schedule", value=False)
-r = annual_rate / 100 / 12
-rows = []
-balance = principal
+    # ── Full Amortization Table ──────────────────────────────────
+    st.markdown("#### Month-by-Month Amortization Schedule")
+    show_all = st.checkbox("Show full schedule", value=False)
 
-for i in range(1, tenure_months + 1):
-    interest_comp  = round(balance * r, 2)
-    principal_comp = round(emi - interest_comp, 2)
-    closing        = max(0, round(balance - principal_comp, 2))
-    rows.append({
-        "Month":           i,
-        "Opening Balance": f"₹{balance:,.0f}",
-        "EMI":             f"₹{emi:,.0f}",
-        "Principal":       f"₹{principal_comp:,.0f}",
-        "Interest":        f"₹{interest_comp:,.0f}",
-        "Closing Balance": f"₹{closing:,.0f}",
-    })
-    balance = closing
-    if balance <= 0:
-        break
+    if not df_accel.empty:
+        display_df = df_accel.copy()
+        display_df.rename(columns={
+            "month": "Month",
+            "opening_balance": "Opening (₹)",
+            "interest_component": "Interest (₹)",
+            "principal_component": "Principal (₹)",
+            "total_payment": "Total Paid (₹)",
+            "closing_balance": "Closing (₹)"
+        }, inplace=True)
 
-df = pd.DataFrame(rows)
-display_df = df if show_all else df.head(12)
-st.dataframe(display_df, use_container_width=True, hide_index=True)
+        view_df = display_df if show_all else display_df.head(12)
+        st.dataframe(view_df, use_container_width=True, hide_index=True)
 
-if not show_all and tenure_months > 12:
-    st.caption(f"Showing 12 of {tenure_months} months. Check 'Show full schedule' to see all.")
+        if not show_all and len(df_accel) > 12:
+            st.caption(f"Displaying first 12 of {len(df_accel)} months. Check 'Show full schedule' to inspect entire tenure.")
 
-# ── Download ─────────────────────────────────────────────────
-csv = df.to_csv(index=False).encode("utf-8")
-st.download_button(
-    label="⬇️ Download Schedule as CSV",
-    data=csv,
-    file_name="emi_schedule.csv",
-    mime="text/csv",
-    use_container_width=True
-)
+        # CSV Download
+        csv_bytes = display_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="⬇️ Export Complete Amortization Schedule (CSV)",
+            data=csv_bytes,
+            file_name="amortization_schedule_prepayment.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+
+
+if __name__ == "__main__":
+    render()

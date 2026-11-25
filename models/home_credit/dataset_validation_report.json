@@ -1,0 +1,32 @@
+{
+    "valid": true,
+    "data_dir": "D:\\Projects\\loansense-AI\\data\\home_credit",
+    "data_provenance": "REAL_KAGGLE_HOME_CREDIT_DATASET",
+    "dataset_source": "anggundwilestari/home-credit",
+    "present_files": [
+        "HomeCredit_columns_description.csv",
+        "POS_CASH_balance.csv",
+        "application_train.csv",
+        "bureau.csv",
+        "bureau_balance.csv",
+        "credit_card_balance.csv",
+        "installments_payments.csv",
+        "previous_application.csv",
+        "sample_submission.csv"
+    ],
+    "missing_required": [],
+    "missing_historical": [],
+    "missing_optional": [
+        "application_test.csv"
+    ],
+    "application_train": {
+        "has_target": true,
+        "has_id": true,
+        "total_records": 307511,
+        "total_columns": 122,
+        "target_distribution": {
+            "0": 0.9193,
+            "1": 0.0807
+        }
+    }
+}

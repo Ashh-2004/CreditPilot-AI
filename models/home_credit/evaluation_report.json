@@ -1,0 +1,113 @@
+{
+    "data_provenance": "REAL_KAGGLE_HOME_CREDIT_DATASET",
+    "dataset_source": "anggundwilestari/home-credit",
+    "disclaimer": "DATASET PROVENANCE: Official Home Credit Default Risk Kaggle dataset (anggundwilestari/home-credit). Trained on 18,750 training records and evaluated on 6,250 genuinely held-out records.",
+    "total_available_in_csv": 307511,
+    "dataset_records_used": 25000,
+    "train_samples": 18750,
+    "held_out_test_samples": 6250,
+    "total_features": 142,
+    "numeric_features_count": 126,
+    "categorical_features_count": 16,
+    "best_model": "gradient_boosting",
+    "models": {
+        "logistic_regression": {
+            "roc_auc": 0.7305,
+            "pr_auc": 0.2235,
+            "accuracy": 0.6966,
+            "precision": 0.1605,
+            "recall": 0.6528,
+            "f1": 0.2576,
+            "brier_score": 0.1974,
+            "confusion_matrix": [
+                [
+                    4025,
+                    1721
+                ],
+                [
+                    175,
+                    329
+                ]
+            ]
+        },
+        "gradient_boosting": {
+            "roc_auc": 0.7407,
+            "pr_auc": 0.2355,
+            "accuracy": 0.7453,
+            "precision": 0.1781,
+            "recall": 0.5972,
+            "f1": 0.2744,
+            "brier_score": 0.171,
+            "confusion_matrix": [
+                [
+                    4357,
+                    1389
+                ],
+                [
+                    203,
+                    301
+                ]
+            ]
+        }
+    },
+    "held_out_test_comparison": {
+        "logistic_regression": {
+            "roc_auc": 0.7305,
+            "pr_auc": 0.2235,
+            "accuracy": 0.6966,
+            "precision": 0.1605,
+            "recall": 0.6528,
+            "f1": 0.2576,
+            "brier_score": 0.1974,
+            "confusion_matrix": [
+                [
+                    4025,
+                    1721
+                ],
+                [
+                    175,
+                    329
+                ]
+            ]
+        },
+        "gradient_boosting": {
+            "roc_auc": 0.7407,
+            "pr_auc": 0.2355,
+            "accuracy": 0.7453,
+            "precision": 0.1781,
+            "recall": 0.5972,
+            "f1": 0.2744,
+            "brier_score": 0.171,
+            "confusion_matrix": [
+                [
+                    4357,
+                    1389
+                ],
+                [
+                    203,
+                    301
+                ]
+            ]
+        }
+    },
+    "stratified_5_fold_cv": {
+        "logistic_regression": {
+            "n_splits": 5,
+            "cv_roc_auc_mean": 0.7365,
+            "cv_roc_auc_std": 0.0072,
+            "cv_pr_auc_mean": 0.2131,
+            "cv_pr_auc_std": 0.014,
+            "cv_f1_mean": 0.2626,
+            "cv_brier_mean": 0.1972
+        },
+        "gradient_boosting": {
+            "n_splits": 5,
+            "cv_roc_auc_mean": 0.7415,
+            "cv_roc_auc_std": 0.0123,
+            "cv_pr_auc_mean": 0.2327,
+            "cv_pr_auc_std": 0.0195,
+            "cv_f1_mean": 0.2735,
+            "cv_brier_mean": 0.1791
+        }
+    }
+}

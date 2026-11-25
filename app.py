@@ -1,9 +1,16 @@
-# app.py — auth built-in, no separate auth.py needed
+# app.py — LoanSense AI Streamlit Application Entrypoint & Router
 
 import streamlit as st
-import bcrypt
-from db import fetch_all
-from pathlib import Path
+from auth import verify_credentials
+from modules import (
+    application,
+    portfolio,
+    emi_calculator,
+    risk_analysis,
+    ai_query,
+    ai_analyst,
+    home_credit_analysis,
+)
 
 st.set_page_config(page_title="LoanSense AI", layout="wide", page_icon="🏦")
 
@@ -29,9 +36,20 @@ if "logged_in" not in st.session_state:
 
 # ── Role → allowed pages ────────────────────────────────────
 ROLE_PAGES = {
-    "admin":   ["Application", "Portfolio", "EMI Calculator", "Risk Analysis", "AI Query Assistant"],
-    "officer": ["Application", "EMI Calculator", "AI Query Assistant"],
-    "viewer":  ["Portfolio", "Risk Analysis"],
+    "admin":   ["Application", "Portfolio", "EMI Calculator", "Risk Analysis", "AI Query Assistant", "AI Loan Analyst", "Home Credit Risk Analysis"],
+    "officer": ["Application", "EMI Calculator", "AI Query Assistant", "AI Loan Analyst", "Home Credit Risk Analysis"],
+    "viewer":  ["Portfolio", "Risk Analysis", "Home Credit Risk Analysis"],
+}
+
+# ── Page Dispatcher Map ─────────────────────────────────────
+PAGE_ROUTERS = {
+    "Application": application.render,
+    "Portfolio": portfolio.render,
+    "EMI Calculator": emi_calculator.render,
+    "Risk Analysis": risk_analysis.render,
+    "AI Query Assistant": ai_query.render,
+    "AI Loan Analyst": ai_analyst.render,
+    "Home Credit Risk Analysis": home_credit_analysis.render,
 }
 
 # ── Login page ──────────────────────────────────────────────
@@ -47,23 +65,19 @@ def show_login():
         role     = st.selectbox("Role", ["admin", "officer", "viewer"])
 
         if st.button("Sign In", use_container_width=True):
-            rows = fetch_all(
-                "SELECT * FROM users WHERE username = %s AND role = %s",
-                (username, role)
-            )
-            if rows and bcrypt.checkpw(password.encode(),
-                                        rows[0]["password_hash"].encode()):
+            is_valid, message, user = verify_credentials(username, password, expected_role=role)
+            if is_valid and user:
                 st.session_state.logged_in = True
-                st.session_state.username  = username
-                st.session_state.role      = role
+                st.session_state.username  = user["username"]
+                st.session_state.role      = user["role"]
                 st.rerun()
             else:
-                st.error("Invalid credentials or role mismatch.")
+                st.error(message or "Invalid credentials or role mismatch.")
 
 # ── Sidebar (after login) ───────────────────────────────────
 def show_sidebar():
     with st.sidebar:
-        st.markdown(f"### Loan**SenseAI**")
+        st.markdown("### Loan**SenseAI**")
         st.caption("Bank Lending Intelligence")
         st.divider()
 
@@ -71,7 +85,7 @@ def show_sidebar():
         st.caption(f"Role: {st.session_state.role.capitalize()}")
         st.divider()
 
-        allowed = ROLE_PAGES[st.session_state.role]
+        allowed = ROLE_PAGES.get(st.session_state.role, [])
         page = st.radio("Navigate", allowed)
 
         st.divider()
@@ -92,18 +106,8 @@ if not st.session_state.logged_in:
     show_login()
 else:
     page = show_sidebar()
-
-    if page == "Application":
-        exec(Path("modules/application.py").read_text(encoding="utf-8"))
-
-    elif page == "Portfolio":
-        exec(Path("modules/portfolio.py").read_text(encoding="utf-8"))
-
-    elif page == "EMI Calculator":
-        exec(Path("modules/emi_calculator.py").read_text(encoding="utf-8"))
-
-    elif page == "Risk Analysis":
-        exec(Path("modules/risk_analysis.py").read_text(encoding="utf-8"))
-
-    elif page == "AI Query Assistant":
-        exec(Path("modules/ai_query.py").read_text(encoding="utf-8"))
+    render_func = PAGE_ROUTERS.get(page)
+    if render_func:
+        render_func()
+    else:
+        st.error(f"Page '{page}' is not available.")

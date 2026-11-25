@@ -1,22 +1,37 @@
 # LoanIQ — Loan Management System
-# Core app
-streamlit==1.58.0
+# Production Backend (FastAPI)
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.0.0
+
+# Data & Processing
 pandas==2.2.3
 plotly==5.24.1
 
 # Database
 mysql-connector-python==9.7.0
 
-# Authentication
+# Authentication & Security
 bcrypt==4.2.1
-streamlit-authenticator==0.4.2
 
 # Environment & utilities
 python-dotenv==1.2.2
 faker==40.23.0
+sqlparse>=0.5.0
 
 # Machine Learning & AI
 scikit-learn>=1.2.0
 xgboost>=1.7.0
 joblib>=1.2.0
+shap>=0.54.1
 google-generativeai>=0.3.0
+kagglehub>=1.0.3
+
+# Testing & Quality
+pytest>=8.0.0
+pytest-mock>=3.12.0
+httpx>=0.27.0
+
+# Legacy UI (Optional / Deprecated)
+# streamlit==1.58.0
+# streamlit-authenticator==0.4.2

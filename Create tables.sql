@@ -15,7 +15,7 @@ CREATE TABLE borrowers (
   email VARCHAR(100),
   phone VARCHAR(15),
   credit_score INT,
-  annual_income DECIMAL(12,2)\,
+  annual_income DECIMAL(12,2),
   employment_type ENUM('Salaried','Self-Employed','Business','Government'),
   property_area ENUM('Urban','Semi-Urban','Rural'),
   existing_loans INT DEFAULT 0,

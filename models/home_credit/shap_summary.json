@@ -1,0 +1,171 @@
+{
+    "data_provenance": "REAL_KAGGLE_HOME_CREDIT_DATASET",
+    "dataset_source": "anggundwilestari/home-credit",
+    "disclaimer": "DATASET PROVENANCE: Official Home Credit Default Risk Kaggle dataset (anggundwilestari/home-credit). Trained on 18,750 training records and evaluated on 6,250 genuinely held-out records.",
+    "model": "gradient_boosting",
+    "global_importance": {
+        "top_features": [
+            {
+                "feature": "EXT_SOURCES_MEAN",
+                "mean_abs_shap": 0.08319
+            },
+            {
+                "feature": "INSTAL_LATE_RATIO",
+                "mean_abs_shap": 0.02318
+            },
+            {
+                "feature": "AMT_GOODS_PRICE",
+                "mean_abs_shap": 0.0224
+            },
+            {
+                "feature": "EXT_SOURCE_3",
+                "mean_abs_shap": 0.02126
+            },
+            {
+                "feature": "DAYS_EMPLOYED_PERCENT",
+                "mean_abs_shap": 0.01943
+            },
+            {
+                "feature": "CC_BALANCE_MAX",
+                "mean_abs_shap": 0.01862
+            },
+            {
+                "feature": "FLAG_OWN_CAR_N",
+                "mean_abs_shap": 0.01621
+            },
+            {
+                "feature": "CODE_GENDER_M",
+                "mean_abs_shap": 0.01519
+            },
+            {
+                "feature": "DAYS_BIRTH",
+                "mean_abs_shap": 0.01467
+            },
+            {
+                "feature": "DAYS_REGISTRATION",
+                "mean_abs_shap": 0.01222
+            },
+            {
+                "feature": "DAYS_ID_PUBLISH",
+                "mean_abs_shap": 0.01169
+            },
+            {
+                "feature": "ANNUITY_INCOME_PERCENT",
+                "mean_abs_shap": 0.01147
+            },
+            {
+                "feature": "PREV_REFUSAL_RATE",
+                "mean_abs_shap": 0.00969
+            },
+            {
+                "feature": "BUREAU_DEBT_CREDIT_RATIO",
+                "mean_abs_shap": 0.0094
+            },
+            {
+                "feature": "CREDIT_TERM",
+                "mean_abs_shap": 0.0094
+            },
+            {
+                "feature": "NAME_CONTRACT_TYPE_Cash loans",
+                "mean_abs_shap": 0.00914
+            },
+            {
+                "feature": "AMT_CREDIT",
+                "mean_abs_shap": 0.0088
+            },
+            {
+                "feature": "EXT_SOURCE_1",
+                "mean_abs_shap": 0.00857
+            },
+            {
+                "feature": "AMT_ANNUITY",
+                "mean_abs_shap": 0.00852
+            },
+            {
+                "feature": "EXT_SOURCE_2",
+                "mean_abs_shap": 0.00832
+            },
+            {
+                "feature": "OCCUPATION_TYPE_Core staff",
+                "mean_abs_shap": 0.0081
+            },
+            {
+                "feature": "BUREAU_AMT_CREDIT_SUM_SUM",
+                "mean_abs_shap": 0.00797
+            },
+            {
+                "feature": "INSTAL_DPD_MAX",
+                "mean_abs_shap": 0.00719
+            },
+            {
+                "feature": "CODE_GENDER_F",
+                "mean_abs_shap": 0.00678
+            },
+            {
+                "feature": "NAME_EDUCATION_TYPE_Secondary / secondary special",
+                "mean_abs_shap": 0.00674
+            }
+        ],
+        "total_features": 270,
+        "evaluation_samples": 150,
+        "disclaimer": "DISCLAIMER: All metrics are computed on a synthetic sample strictly conforming to the Home Credit schema. These metrics must NOT be presented as actual Home Credit Kaggle competition performance until the official competition dataset is ingested."
+    },
+    "sample_individual_explanation": {
+        "predicted_default_probability": 20.92,
+        "risk_drivers": [
+            {
+                "feature": "PREV_REFUSAL_RATE",
+                "shap_value": 0.03798,
+                "effect": "Increases Risk"
+            },
+            {
+                "feature": "DAYS_EMPLOYED_PERCENT",
+                "shap_value": 0.02361,
+                "effect": "Increases Risk"
+            },
+            {
+                "feature": "AMT_GOODS_PRICE",
+                "shap_value": 0.01591,
+                "effect": "Increases Risk"
+            },
+            {
+                "feature": "FLAG_OWN_CAR_N",
+                "shap_value": 0.01207,
+                "effect": "Increases Risk"
+            },
+            {
+                "feature": "BUREAU_AMT_CREDIT_SUM_SUM",
+                "shap_value": 0.00883,
+                "effect": "Increases Risk"
+            }
+        ],
+        "safety_drivers": [
+            {
+                "feature": "EXT_SOURCES_MEAN",
+                "shap_value": -0.13811,
+                "effect": "Decreases Risk"
+            },
+            {
+                "feature": "EXT_SOURCE_3",
+                "shap_value": -0.04511,
+                "effect": "Decreases Risk"
+            },
+            {
+                "feature": "INSTAL_LATE_RATIO",
+                "shap_value": -0.02388,
+                "effect": "Decreases Risk"
+            },
+            {
+                "feature": "CODE_GENDER_M",
+                "shap_value": -0.0203,
+                "effect": "Decreases Risk"
+            },
+            {
+                "feature": "DAYS_REGISTRATION",
+                "shap_value": -0.01438,
+                "effect": "Decreases Risk"
+            }
+        ],
+        "disclaimer": "DISCLAIMER: All metrics are computed on a synthetic sample strictly conforming to the Home Credit schema. These metrics must NOT be presented as actual Home Credit Kaggle competition performance until the official competition dataset is ingested."
+    }
+}

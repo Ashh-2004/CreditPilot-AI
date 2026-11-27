@@ -7,3 +7,15 @@ __pycache__/
 ~$*
 .vscode/
 .idea/
+
+# Testing & logs
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Large Datasets
+data/home_credit/
+
+# External tooling
+unslop/

@@ -1,39 +1,43 @@
-# 🏦 CreditPilot AI — Bank Lending Intelligence System
+# 🏦 CreditPilot AI — Institutional Lending & Risk Intelligence Platform
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.58-red.svg)](https://streamlit.io/)
-[![XGBoost](https://img.shields.io/badge/XGBoost-ML-green.svg)](https://xgboost.readthedocs.io/)
-[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-AI-orange.svg)](https://ai.google.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-19%20%2B%20TypeScript-61DAFB.svg)](https://react.dev/)
 [![MySQL](https://img.shields.io/badge/MySQL-Database-blue.svg)](https://www.mysql.com/)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-AI-orange.svg)](https://ai.google.dev/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**CreditPilot AI** (formerly LoanSense AI) is an enterprise-grade Bank Lending Intelligence and Automated Risk Assessment System built with **Streamlit**, **MySQL**, **XGBoost**, and **Google Gemini AI**. It streamlines loan processing, automates credit risk scoring, monitors portfolio metrics, and enables natural language analytics for banking personnel.
+**CreditPilot AI** is an institutional **decision-support prototype** for bank lending intelligence, explainable credit risk modeling, portfolio monitoring, and policy-grounded AI underwriting.
+
+> [!IMPORTANT]
+> **Human-in-the-Loop Governance:** All machine learning risk scores, calibrated probabilities, and AI-generated underwriting memoranda in CreditPilot AI are strictly **advisory**. The system never autonomously approves or rejects loan applications; binding lending decisions require explicit human loan officer authorization.
 
 ---
 
-## ✨ Features
+## ✨ Key Capabilities
 
-- 🔐 **Role-Based Access Control (RBAC)**
-  - Authenticated login system with encrypted `bcrypt` passwords.
-  - Distinct access levels: **Admin**, **Loan Officer**, and **Viewer**.
+- 🔐 **Admin-Governed Role-Based Access Control (RBAC)**
+  - `bcrypt`-hashed authentication with **Admin**, **Officer**, and **Viewer** roles.
+  - Public self-registration is disabled; only authenticated **Administrators** can provision or remove user accounts via the **User Admin** console (`/api/admin/users`).
 
-- 🤖 **ML-Powered Credit Scoring & Risk Prediction**
-  - Instant default risk prediction for incoming loan applications using a trained **XGBoost Classifier**.
-  - Risk categorization (Low, Medium, High Risk) with feature importance breakdown.
+- 🤖 **Calibrated Credit Risk Modeling & SHAP Explainability**
+  - **Home Credit Default Risk Pipeline (`home_credit/`)**: Trained on **18,750** records and evaluated on **6,250** held-out records from the official Home Credit Kaggle dataset (`142` features: `126` numeric, `16` categorical).
+  - **Honest Held-Out Performance (`models/home_credit/evaluation_report.json`)**:
+    - Gradient Boosting: **ROC-AUC `0.7407`**, PR-AUC `0.2355`, Brier Score `0.1710` (calibrated).
+    - Logistic Regression baseline: **ROC-AUC `0.7305`**, PR-AUC `0.2235`, Brier Score `0.1974`.
+  - Includes per-applicant SHAP feature attributions (`home_credit/explainability.py`).
+  - *Note:* The legacy domestic Indian quick-score heuristic/synthetic baseline (`modules/ml_model.py`) is retained solely for rapid prototype simulation and should not be interpreted as real-world default accuracy.
 
-- 💬 **AI Query Assistant (Powered by Google Gemini)**
-  - Natural Language to SQL analytics assistant.
-  - Ask business questions (e.g., *"What is the average loan amount for self-employed borrowers?"*) and receive automated SQL queries and AI-summarized insights.
+- 📑 **RAG-Grounded AI Underwriting & Policy Assistant (`rag/`, `services/loan_analyst.py`)**
+  - Retrieves institutional credit policy clauses (DTI caps, bureau score tiers, escalation rules) and synthesizes structured Executive Underwriting Memoranda via Google Gemini 2.5 Flash, with a deterministic policy-engine fallback when offline.
 
-- 📊 **Executive Portfolio Dashboard**
-  - Real-time monitoring of key banking metrics: Total Disbursements, Active Loans, Default Rates, and NPA (Non-Performing Assets).
-  - Interactive Plotly visualizations for loan distributions by sector, employment status, and risk tier.
+- 🛡️ **Hardened Natural Language to SQL Analytics (`sql_guard.py`)**
+  - Translates plain-English portfolio questions into read-only MySQL `SELECT` queries.
+  - Enforces `sqlparse` AST validation, table allowlisting, sensitive column blocking (e.g., `password_hash`), single-statement checks, `LIMIT` clamping, and read-only execution (`db.fetch_all_read_only`).
 
-- 🧮 **Interactive EMI & Amortization Calculator**
-  - Calculate loan EMIs, interest breakdowns, and view interactive repayment schedules.
-
-- 📈 **Advanced Risk & NPA Analytics**
-  - Debt-to-Income (DTI) distribution, credit score heatmap, and early warning indicator (EWI) tracking for high-risk accounts.
+- 📊 **Live Portfolio, Delinquency Watchlist & Macro Stress Testing**
+  - Derives KPIs, sector/purpose breakdowns, and delinquency watchlists directly from `loaniq_db` MySQL tables (`0` / empty-state shown when no records match, without fake fallback numbers).
+  - Interactive EMI & Prepayment Amortization Simulator (`calculations.py`).
 
 ---
 
@@ -41,56 +45,21 @@
 
 | Domain | Technologies |
 | :--- | :--- |
-| **Frontend / UI** | Streamlit (Custom Dark Theme) |
-| **Data Visualization** | Plotly Express & Plotly Graph Objects, Pandas |
-| **Machine Learning** | XGBoost, Scikit-Learn, Joblib |
-| **Generative AI** | Google Gemini API (`google-generativeai`) |
-| **Database** | MySQL, `mysql-connector-python` |
-| **Authentication & Security** | Bcrypt, Streamlit Authenticator |
-| **Environment & Package Mgmt** | `python-dotenv`, `uv` / `pip` |
-
----
-
-## 📁 Repository Structure
-
-```
-loaniq/
-├── app.py                      # Main Streamlit application entry point & router
-├── db.py                       # Database connection module (MySQL pool)
-├── train_model.py              # ML model training pipeline (XGBoost)
-├── requirements.txt            # Python dependencies
-├── pyproject.toml              # Project configuration
-├── Create tables.sql           # Database schema & tables initialization
-│
-├── modules/                    # Feature modules
-│   ├── ai_query.py             # Natural language AI Assistant (Google Gemini)
-│   ├── application.py          # Loan Application & Risk Assessment page
-│   ├── emi_calculator.py       # Financial & EMI calculation utilities
-│   ├── ml_model.py             # ML model loading & inference wrapper
-│   ├── portfolio.py            # Portfolio metrics & analytics dashboard
-│   └── risk_analysis.py        # Risk analytics & NPA management
-│
-├── sql/                        # Database scripts & mock data seeders
-│   ├── seed.py                 # Mock data generator (Faker)
-│   └── update_schema.py        # Schema migration helper
-│
-├── data/                       # Dataset storage
-│   └── loan_dataset.csv        # Synthetic training data
-│
-└── models/                     # Trained ML artifacts
-    ├── xgboost_model.joblib    # Exported XGBoost model artifact
-    └── model_metrics.json      # Evaluation metrics (AUC-ROC, F1, Accuracy)
-```
+| **Frontend** | React 19, TypeScript, Tailwind CSS, Vite |
+| **Backend API** | FastAPI, Uvicorn, Pydantic |
+| **Legacy Prototype UI** | Streamlit (`app.py`) |
+| **Machine Learning** | Scikit-Learn (Gradient Boosting, Logistic Regression, Calibration), Joblib, SHAP |
+| **Generative AI & RAG** | Google Gemini API, Custom Institutional Policy Retriever |
+| **Database & Security** | MySQL (`mysql-connector-python` pooling), `sqlparse` AST guard, `bcrypt` |
 
 ---
 
 ## 🚀 Quick Start Guide
 
 ### 1. Prerequisites
-
 - **Python 3.10+**
-- **MySQL Server** installed and running
-- **Google Gemini API Key** ([Get your API key here](https://aistudio.google.com/))
+- **Node.js 18+** (for the React frontend)
+- **MySQL Server** running locally
 
 ### 2. Clone the Repository
 
@@ -99,10 +68,9 @@ git clone https://github.com/Ashh-2004/CreditPilot-AI.git
 cd CreditPilot-AI
 ```
 
-### 3. Set Up Virtual Environment & Install Dependencies
+### 3. Set Up a Virtual Environment
 
 ```bash
-# Create virtual environment
 python -m venv .venv
 
 # Activate environment (Windows PowerShell)
@@ -110,72 +78,71 @@ python -m venv .venv
 
 # Activate environment (Linux/macOS)
 # source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
 ```
 
 ### 4. Configure Environment Variables
-
-Create a `.env` file in the root directory:
+Copy `.env.example` to `.env` and fill in your credentials (never commit `.env`):
 
 ```env
-# Database Credentials
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=your_mysql_password
-DB_NAME=loaniq
+DB_NAME=loaniq_db
 
-# Google Gemini API Key
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 ### 5. Initialize & Seed Database
+1. Run `Create tables.sql` in MySQL to create `loaniq_db` and all tables.
+2. Seed the database with initial users and sample portfolio records:
+   ```bash
+   python sql/seed.py
+   ```
 
-1. Execute `Create tables.sql` in your MySQL workbench or CLI to create the `loaniq` database and required tables.
-2. Run the seed script to populate initial users and test data:
-
+### 6. Install Dependencies & Run
 ```bash
-python sql/seed.py
+# Backend dependencies
+pip install -r requirements.txt
+
+# Start FastAPI backend (serves API + built frontend at http://127.0.0.1:8000)
+.venv\Scripts\python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+
+# (Optional) Run React dev server with hot reload at http://localhost:5173
+npm --prefix frontend install
+npm --prefix frontend run dev -- --port 5173
 ```
-
-### 6. Train the Machine Learning Model (Optional)
-
-A pre-trained model is provided under `models/`. To retrain the model on updated datasets:
-
-```bash
-python train_model.py
-```
-
-### 7. Run the Application
-
-```bash
-streamlit run app.py
-```
-
-Open `http://localhost:8501` in your browser.
 
 ---
 
-## 👥 Default Login Credentials
+## 👥 Default Seeded Credentials (`sql/seed.py`)
 
-*Seed data creates default test accounts for testing:*
+Running `python sql/seed.py` creates the following accounts in `loaniq_db.users`:
 
 | Role | Username | Default Password | Access Level |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin` | `admin123` | Full access (Application, Portfolio, EMI, Risk, AI Query) |
-| **Officer** | `officer1` | `officer123` | Application submission, EMI Calculator, AI Query |
-| **Viewer** | `viewer1` | `viewer123` | Portfolio Dashboard, Risk Analysis |
+| **Admin** | `admin` | `admin123` | Full access + User Admin provisioning |
+| **Officer** | `officer` | `off123` | Applications, EMI, AI Analyst, SQL Assistant, Portfolio, Risk |
+| **Officer** | `officer2` | `off456` | Applications, EMI, AI Analyst, SQL Assistant, Portfolio, Risk |
+| **Viewer** | `viewer` | `view123` | Read-only Overview, Portfolio, Risk Intelligence, SQL Assistant |
+
+*(In development mode, `main.py` also accepts `admin / admin` and `officer / password` as convenience fallbacks when DB seeding hasn't been run yet.)*
+
+---
+
+## 🧪 Running Tests
+
+```bash
+pytest
+npm --prefix frontend run build
+```
 
 ---
 
 ## 📜 License
-
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
 ## 🤝 Contributing
-
 Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](https://github.com/Ashh-2004/CreditPilot-AI/issues).

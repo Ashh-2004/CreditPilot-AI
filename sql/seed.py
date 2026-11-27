@@ -6,9 +6,10 @@ import mysql.connector
 import bcrypt
 from faker import Faker
 
-# Add parent directory to path to import calculations
+# Add parent directory to path to import calculations and config
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from calculations import calc_emi, calc_risk_score
+import config
 
 fake = Faker('en_IN')
 
@@ -17,12 +18,7 @@ random.seed(42)
 Faker.seed(42)
 
 def seed_database():
-    conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="123456",
-        database="loaniq_db"
-    )
+    conn = mysql.connector.connect(**config.get_db_config())
     cur = conn.cursor(dictionary=True)
 
     print("Disabling foreign key checks and truncating tables...")

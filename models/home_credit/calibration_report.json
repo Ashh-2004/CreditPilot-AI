@@ -1,0 +1,51 @@
+{
+    "calibration_method": "sigmoid",
+    "uncalibrated_brier_score": 0.171,
+    "calibrated_brier_score": 0.0685,
+    "brier_improvement_percent": 59.95,
+    "uncalibrated_curve": {
+        "mean_predicted_probability": [
+            0.0732,
+            0.1527,
+            0.2506,
+            0.3483,
+            0.4485,
+            0.5477,
+            0.6475,
+            0.7449,
+            0.8339,
+            0.9157
+        ],
+        "fraction_of_positives": [
+            0.0174,
+            0.0213,
+            0.0412,
+            0.0665,
+            0.0652,
+            0.1113,
+            0.1893,
+            0.2083,
+            0.4032,
+            0.6667
+        ]
+    },
+    "calibrated_curve": {
+        "mean_predicted_probability": [
+            0.0468,
+            0.1407,
+            0.2421,
+            0.3296,
+            0.435
+        ],
+        "fraction_of_positives": [
+            0.0427,
+            0.1439,
+            0.2567,
+            0.3947,
+            0.6667
+        ]
+    },
+    "disclaimer": "DATASET PROVENANCE: Official Home Credit Default Risk Kaggle dataset (anggundwilestari/home-credit). Trained on 18,750 training records and evaluated on 6,250 genuinely held-out records.",
+    "data_provenance": "REAL_KAGGLE_HOME_CREDIT_DATASET",
+    "dataset_source": "anggundwilestari/home-credit"
+}

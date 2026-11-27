@@ -1,4 +1,4 @@
-# 🏦 LoanSense AI — Bank Lending Intelligence System
+# 🏦 CreditPilot AI — Bank Lending Intelligence System
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.58-red.svg)](https://streamlit.io/)
@@ -7,7 +7,7 @@
 [![MySQL](https://img.shields.io/badge/MySQL-Database-blue.svg)](https://www.mysql.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**LoanSense AI** (formerly LoanIQ) is an enterprise-grade Bank Lending Intelligence and Automated Risk Assessment System built with **Streamlit**, **MySQL**, **XGBoost**, and **Google Gemini AI**. It streamlines loan processing, automates credit risk scoring, monitors portfolio metrics, and enables natural language analytics for banking personnel.
+**CreditPilot AI** (formerly LoanSense AI) is an enterprise-grade Bank Lending Intelligence and Automated Risk Assessment System built with **Streamlit**, **MySQL**, **XGBoost**, and **Google Gemini AI**. It streamlines loan processing, automates credit risk scoring, monitors portfolio metrics, and enables natural language analytics for banking personnel.
 
 ---
 
@@ -95,8 +95,8 @@ loaniq/
 ### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/Ashh-2004/loansense-AI.git
-cd loansense-AI
+git clone https://github.com/Ashh-2004/CreditPilot-AI.git
+cd CreditPilot-AI
 ```
 
 ### 3. Set Up Virtual Environment & Install Dependencies
@@ -178,4 +178,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](https://github.com/Ashh-2004/loansense-AI/issues).
+Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](https://github.com/Ashh-2004/CreditPilot-AI/issues).

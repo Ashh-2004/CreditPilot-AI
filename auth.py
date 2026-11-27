@@ -1,11 +1,68 @@
 """
-Authentication and RBAC module for LoanSense AI.
-Provides credential verification with bcrypt and role-based access validation.
+Authentication and RBAC module for CreditPilot AI.
+Provides credential verification with bcrypt, HMAC-SHA256 signed JWT tokens,
+and role-based access validation.
 """
 
+import base64
+import hashlib
+import hmac
+import json
+import time
 from typing import Optional, Tuple, Dict, Any
 import bcrypt
+import config
 from db import fetch_all
+
+
+def _b64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _b64url_decode(data: str) -> bytes:
+    padding = "=" * (-len(data) % 4)
+    return base64.urlsafe_b64decode(data + padding)
+
+
+def create_access_token(username: str, role: str, expires_in_seconds: int = 86400) -> str:
+    """
+    Creates an HMAC-SHA256 signed JWT containing username, role, and expiration timestamp.
+    """
+    header = _b64url_encode(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode("utf-8"))
+    now = int(time.time())
+    payload = _b64url_encode(
+        json.dumps(
+            {"sub": username, "role": role, "iat": now, "exp": now + expires_in_seconds},
+            separators=(",", ":")
+        ).encode("utf-8")
+    )
+    signing_input = f"{header}.{payload}".encode("ascii")
+    signature = hmac.new(config.JWT_SECRET.encode("utf-8"), signing_input, hashlib.sha256).digest()
+    return f"{header}.{payload}.{_b64url_encode(signature)}"
+
+
+def verify_access_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Verifies an HMAC-SHA256 signed JWT and returns its claims if valid and unexpired.
+    Returns None for invalid, tampered, or expired tokens.
+    """
+    if not token or token.count(".") != 2:
+        return None
+    try:
+        header_b64, payload_b64, sig_b64 = token.split(".")
+        signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
+        expected_sig = hmac.new(config.JWT_SECRET.encode("utf-8"), signing_input, hashlib.sha256).digest()
+        provided_sig = _b64url_decode(sig_b64)
+        if not hmac.compare_digest(expected_sig, provided_sig):
+            return None
+        claims = json.loads(_b64url_decode(payload_b64).decode("utf-8"))
+        if int(claims.get("exp", 0)) < int(time.time()):
+            return None
+        if not claims.get("sub") or not claims.get("role"):
+            return None
+        return claims
+    except Exception:
+        return None
 
 
 def verify_credentials(

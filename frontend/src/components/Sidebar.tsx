@@ -7,8 +7,7 @@ import {
   AlertTriangle,
   Globe,
   Sparkles,
-  Terminal,
-  ChevronRight
+  Terminal
 } from 'lucide-react';
 
 export type ViewType =

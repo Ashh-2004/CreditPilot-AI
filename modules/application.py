@@ -70,13 +70,8 @@ def render():
             'age': age
         })
 
-        # Advisory status recommendation (Officers make the final binding decision)
-        if ml_band == "Low":
-            advisory_status = "approved"
-        elif ml_band == "Medium":
-            advisory_status = "review"
-        else:
-            advisory_status = "rejected"
+        # All applications enter human review queue; ML never auto-approves or auto-rejects
+        advisory_status = "review"
 
         # Save to session state so it survives reruns when clicking "Save to DB"
         st.session_state.app_result = {

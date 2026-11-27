@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Role } from './types';
+import { User } from './types';
 import { api } from './services/api';
 import { Navbar, ViewType } from './components/Navbar';
 import { AuthModal } from './components/AuthModal';

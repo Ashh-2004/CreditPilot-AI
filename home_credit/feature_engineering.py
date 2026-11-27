@@ -64,7 +64,7 @@ def aggregate_bureau(data_dir: Path, sk_ids: Optional[Set[int]] = None) -> Optio
     usecols = ["SK_ID_CURR", "DAYS_CREDIT", "AMT_CREDIT_SUM", "AMT_CREDIT_SUM_DEBT"]
     bureau = pd.read_csv(path, usecols=usecols)
     if sk_ids is not None:
-        bureau = bureau[bureau["SK_ID_CURR"].isin(sk_ids)]
+        bureau = bureau[bureau["SK_ID_CURR"].isin(sk_ids)].copy()
 
     if bureau.empty:
         return None
@@ -92,7 +92,7 @@ def aggregate_previous_applications(data_dir: Path, sk_ids: Optional[Set[int]] =
     usecols = ["SK_ID_CURR", "NAME_CONTRACT_STATUS", "AMT_CREDIT"]
     prev = pd.read_csv(path, usecols=usecols)
     if sk_ids is not None:
-        prev = prev[prev["SK_ID_CURR"].isin(sk_ids)]
+        prev = prev[prev["SK_ID_CURR"].isin(sk_ids)].copy()
 
     if prev.empty:
         return None
@@ -120,7 +120,7 @@ def aggregate_installments(data_dir: Path, sk_ids: Optional[Set[int]] = None) ->
     usecols = ["SK_ID_CURR", "DAYS_INSTALMENT", "DAYS_ENTRY_PAYMENT", "AMT_INSTALMENT", "AMT_PAYMENT"]
     inst = pd.read_csv(path, usecols=usecols)
     if sk_ids is not None:
-        inst = inst[inst["SK_ID_CURR"].isin(sk_ids)]
+        inst = inst[inst["SK_ID_CURR"].isin(sk_ids)].copy()
 
     if inst.empty:
         return None
@@ -147,7 +147,7 @@ def aggregate_pos_cash(data_dir: Path, sk_ids: Optional[Set[int]] = None) -> Opt
     usecols = ["SK_ID_CURR", "SK_DPD"]
     pos = pd.read_csv(path, usecols=usecols)
     if sk_ids is not None:
-        pos = pos[pos["SK_ID_CURR"].isin(sk_ids)]
+        pos = pos[pos["SK_ID_CURR"].isin(sk_ids)].copy()
 
     if pos.empty:
         return None

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
-from auth import verify_credentials
+from auth import verify_credentials, create_access_token, verify_access_token
 from db import fetch_all, execute, execute_insert, fetch_all_read_only
 from calculations import calc_emi, calc_risk_score, calc_amortization_schedule, calc_stress_test_impact
 from modules.ml_model import predict_loan_default
@@ -29,18 +29,18 @@ import bcrypt
 import json
 
 app = FastAPI(
-    title="LoanSense AI API",
+    title="CreditPilot AI API",
     description="Institutional Lending Intelligence, ML Risk Modeling, and Advisory Underwriting Backend",
     version="2.0.0"
 )
 
-# Enable CORS for the React frontend
+# Enable CORS for configured frontend origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=config.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
@@ -57,18 +57,26 @@ class RegisterRequest(BaseModel):
     password: str
     role: str = "officer"  # admin, officer, viewer
 
+DEV_FALLBACK_ACCOUNTS = {
+    "admin": ("admin", "admin"),
+    "officer": ("password", "officer"),
+    "officer_1": ("password", "officer"),
+    "viewer": ("password", "viewer"),
+}
+
 @app.post("/api/auth/login")
 def login(req: LoginRequest):
     is_valid, msg, user_record = verify_credentials(req.username, req.password)
     if not is_valid or not user_record:
-        # Fallback check for convenient dev accounts if typed
-        if req.username in ("admin", "officer", "officer_1", "viewer") and req.password in ("password", "admin", "officer"):
-            role = "admin" if "admin" in req.username else ("viewer" if "viewer" in req.username else "officer")
+        # Strict exact-pair dev fallback (only enabled in development environment)
+        dev_match = DEV_FALLBACK_ACCOUNTS.get(req.username.strip())
+        if config.ENVIRONMENT == "development" and dev_match and dev_match[0] == req.password:
+            role = dev_match[1]
             return {
                 "status": "success",
-                "username": req.username,
+                "username": req.username.strip(),
                 "role": role,
-                "token": f"bearer_{req.username}_{role}"
+                "token": create_access_token(req.username.strip(), role)
             }
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -80,50 +88,59 @@ def login(req: LoginRequest):
         "status": "success",
         "username": req.username,
         "role": role,
-        "token": f"bearer_{req.username}_{role}"
+        "token": create_access_token(req.username, role)
     }
 
-def verify_admin_access(authorization: Optional[str] = Header(None)) -> str:
+
+def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[str, str]:
     """
-    Enforces that only authenticated users with the 'admin' role may access the endpoint.
-    Extracts and validates the bearer token against the users database table or dev admin credentials.
+    Validates the signed HMAC-SHA256 JWT in the Authorization header.
+    Raises 401 Unauthorized for missing, expired, or forged tokens.
     """
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required. Please sign in as an administrator."
+            detail="Authentication required. Please sign in."
         )
 
     token = authorization.strip()
     if token.lower().startswith("bearer "):
         token = token[7:].strip()
 
-    # Built-in dev admin support
-    if token == "bearer_admin_admin":
-        return "admin"
+    claims = verify_access_token(token)
+    if not claims:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired authentication token."
+        )
 
-    if token.startswith("bearer_"):
-        parts = token.split("_")
-        if len(parts) >= 3:
-            username = parts[1]
-            role = parts[2]
-            if role != "admin":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Forbidden: Only administrators are authorized to create or manage user accounts."
-                )
-            # Verify user exists in database and holds active admin role
-            try:
-                rows = fetch_all("SELECT role FROM users WHERE username = %s", (username,))
-                if rows and rows[0].get("role") == "admin":
-                    return username
-            except Exception:
-                pass
+    return {"username": str(claims["sub"]), "role": str(claims["role"])}
 
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Forbidden: Only administrators are authorized to create or manage user accounts."
-    )
+
+def require_roles(*allowed_roles: str):
+    """
+    FastAPI dependency factory enforcing role-based access control (RBAC).
+    """
+    def _role_checker(current_user: Dict[str, str] = Depends(get_current_user)) -> Dict[str, str]:
+        if current_user["role"] not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Forbidden: Role '{current_user['role']}' is not authorized for this resource."
+            )
+        return current_user
+    return _role_checker
+
+
+def verify_admin_access(current_user: Dict[str, str] = Depends(get_current_user)) -> str:
+    """
+    Enforces that only authenticated users with the 'admin' role may access the endpoint.
+    """
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Only administrators are authorized to create or manage user accounts."
+        )
+    return current_user["username"]
 
 
 @app.post("/api/auth/register")
@@ -213,7 +230,8 @@ def get_portfolio(
     purpose: Optional[str] = None,
     status_filter: Optional[str] = None,
     risk_band: Optional[str] = None,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer", "viewer"))
 ):
     try:
         raw_apps = fetch_all("""
@@ -347,10 +365,13 @@ class CalculateRiskRequest(BaseModel):
     credit_score: int
 
 class SubmitApplicationRequest(CalculateRiskRequest):
-    officer_decision: str = "approved"  # approved, review, rejected, pending
+    officer_decision: str = "pending"  # Explicit human officer authorization: pending, review, approved, rejected
 
 @app.post("/api/applications/calculate-risk")
-def calculate_risk(req: CalculateRiskRequest):
+def calculate_risk(
+    req: CalculateRiskRequest,
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer"))
+):
     # Calculate EMI
     emi = calc_emi(req.loan_amount, req.interest_rate, req.tenure_months)
     monthly_income = max(1.0, req.annual_income / 12.0)
@@ -373,16 +394,16 @@ def calculate_risk(req: CalculateRiskRequest):
     }
     ml_prob, ml_band = predict_loan_default(ml_payload)
 
-    # Determine initial advisory status recommendation
+    # Advisory risk guidance only (ML never auto-approves or auto-rejects; human review required)
     if rule_score >= 70 and ml_band == "Low":
-        advisory_status = "approved"
-        recommendation = "Advisory: Profile meets prime criteria. Standard terms eligible."
+        advisory_status = "review"
+        recommendation = "Advisory (Low Risk): Profile meets prime criteria. Eligible for standard human officer approval."
     elif ml_band == "High" or rule_score < 45:
-        advisory_status = "rejected"
-        recommendation = "Advisory: Elevated delinquency risk flagged. Collateral or guarantor required."
+        advisory_status = "review"
+        recommendation = "Advisory (High Risk): Elevated delinquency risk flagged. Senior underwriter review, collateral, or guarantor required."
     else:
         advisory_status = "review"
-        recommendation = "Advisory: Moderate risk factors. Manual underwriting review recommended."
+        recommendation = "Advisory (Moderate Risk): Mixed risk factors. Manual underwriting review recommended."
 
     return {
         "status": "success",
@@ -397,7 +418,10 @@ def calculate_risk(req: CalculateRiskRequest):
     }
 
 @app.post("/api/applications")
-def submit_application(req: SubmitApplicationRequest):
+def submit_application(
+    req: SubmitApplicationRequest,
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer"))
+):
     # Recalculate server-side to guarantee integrity
     emi = calc_emi(req.loan_amount, req.interest_rate, req.tenure_months)
     monthly_income = max(1.0, req.annual_income / 12.0)
@@ -457,7 +481,10 @@ class EmiCalculateRequest(BaseModel):
     lump_sum_month: int = 0
 
 @app.post("/api/emi/calculate")
-def calculate_emi_schedule(req: EmiCalculateRequest):
+def calculate_emi_schedule(
+    req: EmiCalculateRequest,
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer"))
+):
     base_emi = calc_emi(req.principal, req.annual_rate, req.tenure_months)
     processing_fee = round(req.principal * req.processing_fee_pct / 100.0)
 
@@ -498,7 +525,11 @@ def calculate_emi_schedule(req: EmiCalculateRequest):
 # ==============================================================================
 
 @app.get("/api/risk/summary")
-def get_risk_summary(min_dpd: int = 15, max_score: int = 680):
+def get_risk_summary(
+    min_dpd: int = 15,
+    max_score: int = 680,
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer", "viewer"))
+):
     try:
         risk_summary = fetch_all("""
             SELECT
@@ -514,16 +545,11 @@ def get_risk_summary(min_dpd: int = 15, max_score: int = 680):
     except Exception:
         r_row = {}
 
-    total_apps = r_row.get("total_apps") or 0
-    avg_score = round(float(r_row.get("avg_score") or 712))
-    high_count = r_row.get("high_risk") or 0
-    med_count = r_row.get("med_risk") or 0
-    low_count = r_row.get("low_risk") or 0
-
-    if total_apps == 0:
-        high_count, med_count, low_count = 142, 480, 2150
-        total_apps = high_count + med_count + low_count
-        avg_score = 718
+    total_apps = int(r_row.get("total_apps") or 0)
+    avg_score = round(float(r_row.get("avg_score") or 0))
+    high_count = int(r_row.get("high_risk") or 0)
+    med_count = int(r_row.get("med_risk") or 0)
+    low_count = int(r_row.get("low_risk") or 0)
 
     # Delinquency records
     try:
@@ -547,17 +573,9 @@ def get_risk_summary(min_dpd: int = 15, max_score: int = 680):
     except Exception:
         delinquent_records = []
 
-    if not delinquent_records:
-        delinquent_records = [
-            {"loan_id": "LN-3891", "full_name": "Manoj Verma", "loan_purpose": "Personal Loan", "outstanding_balance": 420000, "overdue_days": 62, "credit_score": 548, "debt_burden_ratio": 8.9, "action": "🔴 Legal Action"},
-            {"loan_id": "LN-3744", "full_name": "Pooja Gupta", "loan_purpose": "Vehicle Loan", "outstanding_balance": 180000, "overdue_days": 31, "credit_score": 602, "debt_burden_ratio": 6.2, "action": "🟡 Senior Follow-up"},
-            {"loan_id": "LN-3621", "full_name": "Suresh Babu", "loan_purpose": "Business Loan", "outstanding_balance": 890000, "overdue_days": 45, "credit_score": 571, "debt_burden_ratio": 7.8, "action": "🔴 Collateral Review"},
-            {"loan_id": "LN-3580", "full_name": "Anita Desai", "loan_purpose": "Home Loan", "outstanding_balance": 230000, "overdue_days": 18, "credit_score": 638, "debt_burden_ratio": 4.5, "action": "🟢 Payment Reminder"}
-        ]
-    else:
-        for r in delinquent_records:
-            d = r.get("overdue_days", 0)
-            r["action"] = "🔴 Legal Action" if d >= 60 else ("🟡 Senior Follow-up" if d >= 30 else "🟢 Payment Reminder")
+    for r in delinquent_records:
+        d = r.get("overdue_days", 0)
+        r["action"] = "🔴 Legal Action" if d >= 60 else ("🟡 Senior Follow-up" if d >= 30 else "🟢 Payment Reminder")
 
     # Supervised models comparison metrics
     metrics_path = os.path.join(os.getcwd(), 'models', 'model_metrics.json')
@@ -588,7 +606,10 @@ class StressTestRequest(BaseModel):
     income_shock_pct: float = 10.0
 
 @app.post("/api/risk/stress-test")
-def run_stress_test(req: StressTestRequest):
+def run_stress_test(
+    req: StressTestRequest,
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer", "viewer"))
+):
     result = calc_stress_test_impact(
         baseline_exposure=req.baseline_exposure_cr * 1e7,
         baseline_npa_rate=req.baseline_npa_rate,
@@ -612,7 +633,9 @@ def run_stress_test(req: StressTestRequest):
 # ==============================================================================
 
 @app.get("/api/home-credit/evaluation")
-def get_home_credit_evaluation():
+def get_home_credit_evaluation(
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer", "viewer"))
+):
     artifacts = load_home_credit_artifacts()
     if not artifacts["is_loaded"]:
         raise HTTPException(
@@ -626,7 +649,10 @@ def get_home_credit_evaluation():
     }
 
 @app.post("/api/home-credit/predict")
-def predict_home_credit(applicant: Dict[str, Any]):
+def predict_home_credit(
+    applicant: Dict[str, Any],
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer", "viewer"))
+):
     artifacts = load_home_credit_artifacts()
     if not artifacts["is_loaded"]:
         raise HTTPException(
@@ -662,7 +688,10 @@ class QueryRequest(BaseModel):
     prompt: str
 
 @app.post("/api/ai/query")
-def natural_language_query(req: QueryRequest):
+def natural_language_query(
+    req: QueryRequest,
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer", "viewer"))
+):
     api_key = config.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
 
     if not api_key:
@@ -742,12 +771,18 @@ class PolicyQueryRequest(BaseModel):
     ml_prob: Optional[float] = None
 
 @app.post("/api/ai/underwrite")
-def generate_underwriting_memo(applicant: Dict[str, Any]):
+def generate_underwriting_memo(
+    applicant: Dict[str, Any],
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer"))
+):
     memo_res = generate_advisory_underwriting_memo(applicant)
     return memo_res
 
 @app.post("/api/ai/policy-query")
-def query_policy(req: PolicyQueryRequest):
+def query_policy(
+    req: PolicyQueryRequest,
+    _user: Dict[str, str] = Depends(require_roles("admin", "officer"))
+):
     retriever = PolicyRetriever()
     matching_rules = retriever.retrieve(
         loan_purpose=req.loan_purpose,
@@ -819,7 +854,7 @@ Conclude with: 'Advisory Note: Policy rules provide institutional guidance and d
 def health_check():
     return {
         "status": "healthy",
-        "service": "LoanSense AI API",
+        "service": "CreditPilot AI API",
         "version": "2.0.0",
         "database": config.get_masked_db_config(),
         "gemini_configured": bool(config.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY"))

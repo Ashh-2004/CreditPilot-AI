@@ -1,17 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { HomeCreditPrediction } from '../types';
-import {
-  Globe,
-  Sliders,
-  CheckCircle2,
-  AlertTriangle,
-  Info,
-  TrendingDown,
-  Activity,
-  Layers,
-  ChevronDown
-} from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 const BENCHMARKS: Record<string, any> = {
   prime: {
@@ -94,9 +84,9 @@ export const HomeCreditView: React.FC = () => {
   const [income, setIncome] = useState(200000);
   const [credit, setCredit] = useState(500000);
   const [annuity, setAnnuity] = useState(25000);
-  const [goods, setGoods] = useState(450000);
+  const [_goods, _setGoods] = useState(450000);
   const [gender, setGender] = useState('M');
-  const [contractType, setContractType] = useState('Cash loans');
+  const [_contractType, _setContractType] = useState('Cash loans');
   const [age, setAge] = useState(38);
   const [employedYears, setEmployedYears] = useState(6.5);
   const [ext1, setExt1] = useState(0.50);
@@ -104,61 +94,42 @@ export const HomeCreditView: React.FC = () => {
   const [ext3, setExt3] = useState(0.48);
   const [lateRatio, setLateRatio] = useState(0.05);
 
-  const [loading, setLoading] = useState(false);
+  const [_loading, _setLoading] = useState(false);
   const [prediction, setPrediction] = useState<HomeCreditPrediction | null>(null);
   const [evalData, setEvalData] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadEvaluation = async () => {
-    try {
-      const res = await api.getHomeCreditEvaluation();
-      setEvalData(res);
-    } catch (err: any) {
-      console.error(err);
-    }
-  };
-
   useEffect(() => {
-    loadEvaluation();
+    let cancelled = false;
+    api.getHomeCreditEvaluation()
+      .then((res) => {
+        if (!cancelled) setEvalData(res);
+      })
+      .catch((err: any) => console.error(err));
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handlePredict = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let payload: any = {};
-      if (mode === 'benchmark') {
-        payload = { ...BENCHMARKS[benchmarkKey] };
-        delete payload.label;
-        delete payload.source;
-      } else {
-        payload = {
-          AMT_INCOME_TOTAL: Number(income),
-          AMT_CREDIT: Number(credit),
-          AMT_ANNUITY: Number(annuity),
-          AMT_GOODS_PRICE: Number(goods),
-          NAME_CONTRACT_TYPE: contractType,
-          CODE_GENDER: gender,
-          DAYS_BIRTH: Math.round(-age * 365.25),
-          DAYS_EMPLOYED: Math.round(-employedYears * 365.25),
-          EXT_SOURCE_1: Number(ext1),
-          EXT_SOURCE_2: Number(ext2),
-          EXT_SOURCE_3: Number(ext3),
-          INSTAL_LATE_RATIO: Number(lateRatio),
-        };
-      }
-
-      const res = await api.predictHomeCredit(payload);
-      setPrediction(res);
-    } catch (err: any) {
-      setError(err.message || 'Error executing Home Credit inference');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    handlePredict();
+    if (mode !== 'benchmark') return;
+    let cancelled = false;
+    const payload: any = { ...BENCHMARKS[benchmarkKey] };
+    delete payload.label;
+    delete payload.source;
+    api.predictHomeCredit(payload)
+      .then((res) => {
+        if (!cancelled) {
+          setPrediction(res);
+          setError(null);
+        }
+      })
+      .catch((err: any) => {
+        if (!cancelled) setError(err.message || 'Error executing Home Credit inference');
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [benchmarkKey, mode]);
 
   return (

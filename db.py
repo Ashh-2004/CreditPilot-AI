@@ -153,7 +153,10 @@ def fetch_all_read_only(
     Enforces transaction read-only context where supported.
     Guarantees resource cleanup.
     """
-    conn = get_conn()
+    if config.DB_READONLY_USER:
+        conn = mysql.connector.connect(**config.get_readonly_db_config())
+    else:
+        conn = get_conn()
     cur = None
     try:
         cur = conn.cursor(dictionary=True)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { User, Role } from '../types';
 import { BoomerangCanvas } from '../components/BoomerangCanvas';
@@ -9,7 +9,6 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
-  Lock,
   User as UserIcon,
   Eye,
   EyeOff
@@ -42,7 +41,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
   // Deleting state
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -53,10 +52,30 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ currentU
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchUsers();
+    let cancelled = false;
+    api.getUsers()
+      .then((res) => {
+        if (!cancelled) {
+          setUsers(res.users || []);
+          setError(null);
+        }
+      })
+      .catch((err: any) => {
+        if (!cancelled) {
+          setError(err?.message || 'Failed to load user registry.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {

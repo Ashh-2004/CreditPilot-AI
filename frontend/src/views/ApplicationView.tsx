@@ -41,8 +41,8 @@ export const ApplicationView: React.FC = () => {
   const [memoResult, setMemoResult] = useState<UnderwritingMemoResult | null>(null);
   const [memoOpen, setMemoOpen] = useState(false);
 
-  // Section 6: Officer Authorization
-  const [officerDecision, setOfficerDecision] = useState<string>('approved');
+  // Section 6: Officer Authorization (human-in-the-loop: always defaults to 'review', never auto-approved/rejected)
+  const [officerDecision, setOfficerDecision] = useState<string>('review');
   const [officerNotes, setOfficerNotes] = useState('Verified KYC and bureau score. Income documents verified.');
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export const ApplicationView: React.FC = () => {
         credit_score: Number(creditScore),
       });
       setRiskResult(res);
-      setOfficerDecision(res.advisory_status);
+      setOfficerDecision('review');
     } catch (err: any) {
       setError(err.message || 'Error evaluating credit risk');
     } finally {
@@ -93,7 +93,7 @@ export const ApplicationView: React.FC = () => {
       });
       setMemoResult(res);
       setMemoOpen(true);
-    } catch (err: any) {
+    } catch {
       setError('Failed to generate underwriting memorandum.');
     } finally {
       setMemoLoading(false);

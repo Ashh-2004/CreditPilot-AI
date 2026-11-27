@@ -17,13 +17,13 @@ export const EmiCalculatorView: React.FC = () => {
   const [lumpSumPrepayment, setLumpSumPrepayment] = useState(100000);
   const [lumpSumMonth, setLumpSumMonth] = useState(24);
 
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [result, setResult] = useState<EmiScheduleResult | null>(null);
 
-  const calculate = async () => {
-    setLoading(true);
-    try {
-      const res = await api.calculateEmi({
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(true);
+      api.calculateEmi({
         principal: Number(principal),
         annual_rate: Number(annualRate),
         tenure_months: Number(tenureMonths),
@@ -31,18 +31,10 @@ export const EmiCalculatorView: React.FC = () => {
         monthly_prepayment: Number(monthlyPrepayment),
         lump_sum_prepayment: Number(lumpSumPrepayment),
         lump_sum_month: Number(lumpSumMonth)
-      });
-      setResult(res);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      calculate();
+      })
+        .then((res) => setResult(res))
+        .catch((e) => console.error(e))
+        .finally(() => setLoading(false));
     }, 250);
     return () => clearTimeout(timer);
   }, [principal, annualRate, tenureMonths, monthlyPrepayment, lumpSumPrepayment, lumpSumMonth]);

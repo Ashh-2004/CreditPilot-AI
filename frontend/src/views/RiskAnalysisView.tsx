@@ -92,7 +92,7 @@ export const RiskAnalysisView: React.FC = () => {
   const [indianAmount, setIndianAmount] = useState(1500000);
   const [indianTenure, setIndianTenure] = useState(84);
   const [indianRate, setIndianRate] = useState(9.5);
-  const [indianPurpose, setIndianPurpose] = useState('Home Improvement');
+  const [indianPurpose, _setIndianPurpose] = useState('Home Improvement');
   const [indianEmpType, setIndianEmpType] = useState('Salaried');
   const [indianLoans, setIndianLoans] = useState(1);
   const [indianResult, setIndianResult] = useState<RiskCalculationResult | null>(null);
@@ -103,14 +103,14 @@ export const RiskAnalysisView: React.FC = () => {
   const [hcApplicant, setHcApplicant] = useState<any>(BENCHMARKS.prime);
   const [hcPrediction, setHcPrediction] = useState<HomeCreditPrediction | null>(null);
   const [hcLoading, setHcLoading] = useState(false);
-  const [evalData, setEvalData] = useState<any>(null);
+  const [_evalData, setEvalData] = useState<any>(null);
 
   // Stress Testing State
   const [summary, setSummary] = useState<RiskSummary | null>(null);
   const [rateShock, setRateShock] = useState(150);
   const [incomeShock, setIncomeShock] = useState(10.0);
-  const [exposureCr, setExposureCr] = useState(250.0);
-  const [baselineNpa, setBaselineNpa] = useState(3.2);
+  const [exposureCr, _setExposureCr] = useState(250.0);
+  const [baselineNpa, _setBaselineNpa] = useState(3.2);
   const [stressResult, setStressResult] = useState<StressTestResult | null>(null);
 
   // Run Indian ML Model
@@ -166,11 +166,42 @@ export const RiskAnalysisView: React.FC = () => {
   };
 
   useEffect(() => {
-    runIndianModel();
-    runHomeCredit(BENCHMARKS.prime);
-    api.getHomeCreditEvaluation().then(setEvalData).catch(() => { });
-    api.getRiskSummary().then(setSummary).catch(() => { });
-    runStress();
+    let cancelled = false;
+    api.calculateRisk({
+      name: 'Simulated Indian Borrower',
+      loan_amount: 1500000,
+      annual_income: 900000,
+      employment_type: 'Salaried',
+      property_area: 'Urban',
+      existing_loans: 1,
+      tenure_months: 84,
+      interest_rate: 9.5,
+      loan_purpose: 'Home Improvement',
+      credit_score: 720
+    }).then((res) => { if (!cancelled) setIndianResult(res); }).catch(() => { });
+
+    api.predictHomeCredit(BENCHMARKS.prime)
+      .then((res) => { if (!cancelled) setHcPrediction(res); })
+      .catch(() => { });
+
+    api.getHomeCreditEvaluation()
+      .then((res) => { if (!cancelled) setEvalData(res); })
+      .catch(() => { });
+
+    api.getRiskSummary()
+      .then((res) => { if (!cancelled) setSummary(res); })
+      .catch(() => { });
+
+    api.runStressTest({
+      baseline_exposure_cr: 250.0,
+      baseline_npa_rate: 3.2,
+      rate_shock_bps: 150,
+      income_shock_pct: 10.0
+    }).then((res) => { if (!cancelled) setStressResult(res); }).catch(() => { });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleBenchmarkSelect = (key: string) => {

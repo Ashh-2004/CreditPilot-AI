@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { User } from '../types';
 import { CreditPilotLogo } from './CreditPilotLogo';
 import { BoomerangCanvas } from './BoomerangCanvas';
-import { ArrowRight, Eye, EyeOff, Lock, User as UserIcon, Shield } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, User as UserIcon, Shield } from 'lucide-react';
 
 interface AuthModalProps {
   onSuccess: (user: User) => void;

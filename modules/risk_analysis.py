@@ -38,24 +38,19 @@ def render():
     except Exception:
         r_row = {}
 
-    total_apps = r_row.get("total_apps") or 0
-    avg_score = round(float(r_row.get("avg_score") or 712))
-    high_count = r_row.get("high_risk") or 0
-    med_count = r_row.get("med_risk") or 0
-    low_count = r_row.get("low_risk") or 0
-
-    # If DB has 0 applications, use realistic portfolio baseline
-    if total_apps == 0:
-        high_count, med_count, low_count = 142, 480, 2150
-        total_apps = high_count + med_count + low_count
-        avg_score = 718
+    total_apps = int(r_row.get("total_apps") or 0)
+    avg_score = round(float(r_row.get("avg_score") or 0))
+    high_count = int(r_row.get("high_risk") or 0)
+    med_count = int(r_row.get("med_risk") or 0)
+    low_count = int(r_row.get("low_risk") or 0)
 
     # Dynamic KPI Cards
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("🔴 High Risk Exposure", f"{high_count:,}", delta=f"{round(high_count/total_apps*100, 1)}% of portfolio", delta_color="inverse")
-    m2.metric("🟡 Medium Risk", f"{med_count:,}", delta=f"{round(med_count/total_apps*100, 1)}% of portfolio", delta_color="inverse")
-    m3.metric("🟢 Low Risk (Prime)", f"{low_count:,}", delta=f"{round(low_count/total_apps*100, 1)}% prime tier")
-    m4.metric("Avg. Credit Bureau Score", f"{avg_score}", delta="Dynamic Portfolio Metric")
+    denom = max(1, total_apps)
+    m1.metric("🔴 High Risk Exposure", f"{high_count:,}", delta=f"{round(high_count/denom*100, 1)}% of portfolio", delta_color="inverse")
+    m2.metric("🟡 Medium Risk", f"{med_count:,}", delta=f"{round(med_count/denom*100, 1)}% of portfolio", delta_color="inverse")
+    m3.metric("🟢 Low Risk (Prime)", f"{low_count:,}", delta=f"{round(low_count/denom*100, 1)}% prime tier")
+    m4.metric("Avg. Credit Bureau Score", f"{avg_score if total_apps > 0 else 'N/A'}", delta="Live DB Metric")
 
     st.divider()
 
@@ -98,14 +93,7 @@ def render():
             delinquent_records = []
 
         if not delinquent_records:
-            st.info("Showing benchmark delinquency watchlist (no live overdue loans matched current filters).")
-            sample_delinquent = [
-                {"Loan ID": "LN-3891", "Borrower": "Manoj Verma", "Facility": "Personal Loan", "Outstanding": "₹4,20,000", "DPD": 62, "Score": 548, "Burden": 8.9, "Action": "🔴 Escalate Legal"},
-                {"Loan ID": "LN-3744", "Borrower": "Pooja Gupta", "Facility": "Vehicle Loan", "Outstanding": "₹1,80,000", "DPD": 31, "Score": 602, "Burden": 6.2, "Action": "🟡 Cure Notice"},
-                {"Loan ID": "LN-3621", "Borrower": "Suresh Babu", "Facility": "Business Loan", "Outstanding": "₹8,90,000", "DPD": 45, "Score": 571, "Burden": 7.8, "Action": "🔴 Collateral Review"},
-                {"Loan ID": "LN-3580", "Borrower": "Anita Desai", "Facility": "Home Loan", "Outstanding": "₹2,30,000", "DPD": 18, "Score": 638, "Burden": 4.5, "Action": "🟢 Grace Tele-call"}
-            ]
-            st.dataframe(pd.DataFrame(sample_delinquent), use_container_width=True, hide_index=True)
+            st.info("No live overdue loans in the database matched the current DPD and credit score filters.")
         else:
             df_del = pd.DataFrame(delinquent_records)
             df_del["Action"] = df_del["overdue_days"].apply(

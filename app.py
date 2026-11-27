@@ -1,7 +1,8 @@
-# app.py — LoanSense AI Streamlit Application Entrypoint & Router
+# app.py — CreditPilot AI Streamlit Application Entrypoint & Router
 
 import streamlit as st
 from auth import verify_credentials
+from db import fetch_all
 from modules import (
     application,
     portfolio,
@@ -12,7 +13,7 @@ from modules import (
     home_credit_analysis,
 )
 
-st.set_page_config(page_title="LoanSense AI", layout="wide", page_icon="🏦")
+st.set_page_config(page_title="CreditPilot AI", layout="wide", page_icon="🏦")
 
 # ── Dark theme CSS ──────────────────────────────────────────
 st.markdown("""<style>
@@ -56,8 +57,8 @@ PAGE_ROUTERS = {
 def show_login():
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
-        st.markdown("## 🏦 Loan**Sense AI**")
-        st.markdown("##### Bank Lending Intelligence System")
+        st.markdown("## 🏦 Credit**Pilot AI**")
+        st.markdown("##### Institutional Lending & Risk Intelligence")
         st.divider()
 
         username = st.text_input("Username")
@@ -77,8 +78,8 @@ def show_login():
 # ── Sidebar (after login) ───────────────────────────────────
 def show_sidebar():
     with st.sidebar:
-        st.markdown("### Loan**SenseAI**")
-        st.caption("Bank Lending Intelligence")
+        st.markdown("### Credit**Pilot AI**")
+        st.caption("Institutional Lending Intelligence")
         st.divider()
 
         st.markdown(f"👤 **{st.session_state.username.capitalize()}**")
@@ -89,9 +90,25 @@ def show_sidebar():
         page = st.radio("Navigate", allowed)
 
         st.divider()
-        st.caption("System Stats")
-        st.metric("Active Loans", "3,847")
-        st.metric("NPA Rate", "2.4%")
+        st.caption("Live Portfolio Stats")
+        try:
+            stats = fetch_all("""
+                SELECT
+                    SUM(CASE WHEN loan_status = 'active' THEN 1 ELSE 0 END) AS active_loans,
+                    COUNT(*) AS total_loans,
+                    SUM(CASE WHEN loan_status IN ('npa', 'defaulted') THEN 1 ELSE 0 END) AS npa_loans
+                FROM loans
+            """)
+            row = stats[0] if stats else {}
+            active_loans = int(row.get("active_loans") or 0)
+            total_loans = int(row.get("total_loans") or 0)
+            npa_loans = int(row.get("npa_loans") or 0)
+            npa_rate = f"{(npa_loans / total_loans * 100):.1f}%" if total_loans > 0 else "0.0%"
+            st.metric("Active Loans", f"{active_loans:,}")
+            st.metric("NPA / Default Rate", npa_rate)
+        except Exception:
+            st.metric("Active Loans", "N/A")
+            st.metric("NPA / Default Rate", "N/A")
 
         if st.button("Sign Out", use_container_width=True):
             st.session_state.logged_in = False

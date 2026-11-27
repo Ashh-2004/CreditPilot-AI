@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { PortfolioData, ApplicationItem } from '../types';
+import { PortfolioData } from '../types';
 import { BoomerangCanvas } from '../components/BoomerangCanvas';
 import {
   ArrowRight,
@@ -10,8 +10,8 @@ import {
 
 export const PortfolioView: React.FC = () => {
   const [data, setData] = useState<PortfolioData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [_loading, setLoading] = useState(true);
+  const [_error, setError] = useState<string | null>(null);
 
   // Filters
   const [purpose, setPurpose] = useState('');
@@ -42,8 +42,33 @@ export const PortfolioView: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchPortfolio();
-  }, [purpose, status, band]);
+    let cancelled = false;
+    api.getPortfolio({
+      purpose: purpose || undefined,
+      status: status || undefined,
+      band: band || undefined,
+      search: search || undefined
+    })
+      .then((res) => {
+        if (!cancelled) {
+          setData(res);
+          setCurrentPage(1);
+        }
+      })
+      .catch((err: any) => {
+        if (!cancelled) {
+          setError(err.message || 'Failed to load portfolio registry');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [purpose, status, band, search]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

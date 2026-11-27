@@ -5,6 +5,7 @@ Ensures secrets are never hardcoded in source modules.
 """
 
 import os
+import secrets
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -21,8 +22,25 @@ load_dotenv(dotenv_path=ENV_PATH, override=True)
 DB_HOST: str = os.getenv("DB_HOST", "localhost")
 DB_PORT: int = int(os.getenv("DB_PORT", "3306"))
 DB_USER: str = os.getenv("DB_USER", "root")
-DB_PASSWORD: str = os.getenv("DB_PASSWORD", "123456")
+DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
 DB_NAME: str = os.getenv("DB_NAME", "loaniq_db")
+
+# Optional dedicated read-only MySQL credentials for AI SQL Assistant
+DB_READONLY_USER: str = os.getenv("DB_READONLY_USER", "")
+DB_READONLY_PASSWORD: str = os.getenv("DB_READONLY_PASSWORD", "")
+
+# ------------------------------------------------------------------------------
+# Security, JWT & CORS Settings
+# ------------------------------------------------------------------------------
+JWT_SECRET: str = os.getenv("JWT_SECRET") or secrets.token_hex(32)
+CORS_ORIGINS: list[str] = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000"
+    ).split(",")
+    if origin.strip()
+]
 
 # ------------------------------------------------------------------------------
 # Gemini API Settings
@@ -49,6 +67,18 @@ def get_db_config() -> dict:
         "password": DB_PASSWORD,
         "database": DB_NAME,
     }
+
+
+def get_readonly_db_config() -> dict:
+    """
+    Returns MySQL connection parameters using dedicated read-only credentials when configured,
+    falling back to the primary DB configuration otherwise.
+    """
+    cfg = get_db_config()
+    if DB_READONLY_USER:
+        cfg["user"] = DB_READONLY_USER
+        cfg["password"] = DB_READONLY_PASSWORD
+    return cfg
 
 
 def get_masked_db_config() -> dict:

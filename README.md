@@ -61,7 +61,26 @@
 - **Node.js 18+** (for the React frontend)
 - **MySQL Server** running locally
 
-### 2. Configure Environment Variables
+### 2. Clone the Repository
+
+```bash
+git clone https://github.com/Ashh-2004/CreditPilot-AI.git
+cd CreditPilot-AI
+```
+
+### 3. Set Up a Virtual Environment
+
+```bash
+python -m venv .venv
+
+# Activate environment (Windows PowerShell)
+.venv\Scripts\Activate.ps1
+
+# Activate environment (Linux/macOS)
+# source .venv/bin/activate
+```
+
+### 4. Configure Environment Variables
 Copy `.env.example` to `.env` and fill in your credentials (never commit `.env`):
 
 ```env
@@ -74,14 +93,14 @@ DB_NAME=loaniq_db
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-### 3. Initialize & Seed Database
+### 5. Initialize & Seed Database
 1. Run `Create tables.sql` in MySQL to create `loaniq_db` and all tables.
 2. Seed the database with initial users and sample portfolio records:
    ```bash
    python sql/seed.py
    ```
 
-### 4. Install Dependencies & Run
+### 6. Install Dependencies & Run
 ```bash
 # Backend dependencies
 pip install -r requirements.txt
@@ -122,3 +141,8 @@ npm --prefix frontend run build
 
 ## 📜 License
 Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+## 🤝 Contributing
+Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](https://github.com/Ashh-2004/CreditPilot-AI/issues).
